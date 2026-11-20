@@ -1,0 +1,104 @@
+{
+    "name": "sirius/laravel-builder",
+    "description": "Action-based Livewire CRUD scaffolding for Laravel using Sirius UI.",
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/sirius-program/sirius-laravel-builder",
+    "support": {
+        "docs": "https://github.com/sirius-program/sirius-laravel-builder-docs#readme",
+        "issues": "https://github.com/sirius-program/sirius-laravel-builder/issues",
+        "source": "https://github.com/sirius-program/sirius-laravel-builder"
+    },
+    "keywords": [
+        "blade",
+        "components",
+        "laravel",
+        "livewire",
+        "tailwindcss"
+    ],
+    "authors": [
+        {
+            "name": "Sirius: Code",
+            "role": "Author"
+        },
+        {
+            "name": "Fathul Husnan",
+            "role": "Contributor"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "illuminate/support": "^12.61.1 || ^13.12.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.24",
+        "livewire/livewire": "^4.0",
+        "nikic/php-parser": "^5.0",
+        "orchestra/testbench": "^10.11 || ^11.0",
+        "peckphp/peck": "^0.3.0",
+        "pestphp/pest": "^3.8",
+        "phpstan/phpstan": "^2.0",
+        "rector/rector": "^2.8"
+    },
+    "autoload": {
+        "psr-4": { "Sirius\\LaravelBuilder\\": "src/" }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/",
+            "App\\": "tests/Fixtures/Application/app/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": ["Sirius\\LaravelBuilder\\SiriusLaravelBuilderServiceProvider"]
+        }
+    },
+    "scripts": {
+        "lint": [
+            "pint --parallel"
+        ],
+        "lint:check": [
+            "pint --parallel --test"
+        ],
+        "ci:check": [
+            "Composer\\Config::disableProcessTimeout",
+            "@test"
+        ],
+        "types:check": [
+            "phpstan analyse --memory-limit=2G"
+        ],
+        "typos:check": [
+            "peck"
+        ],
+        "typos": [
+            "peck --ignore-all"
+        ],
+        "refactor:check": [
+            "rector --dry-run"
+        ],
+        "refactor": [
+            "rector"
+        ],
+        "test": [
+            "@php test.php"
+        ],
+        "check": [
+            "@test"
+        ],
+        "post-autoload-dump": [
+            "@composer run prepare"
+        ],
+        "prepare": [
+            "@php vendor/bin/testbench package:discover --ansi"
+        ]
+    },
+    "config": {
+        "allow-plugins": { "pestphp/pest-plugin": true },
+        "platform": { "php": "8.3.0" },
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

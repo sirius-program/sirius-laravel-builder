@@ -1,0 +1,14 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+    phpVersion: 80300
+    bootstrapFiles:
+        - tests/phpstan-bootstrap.php
+    paths:
+        - src
+        - tests/Support
+        - tests/Fixtures/Application/app
+        - tests/Fixtures/Package
+    tmpDir: .phpstan.cache
