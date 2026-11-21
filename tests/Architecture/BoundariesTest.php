@@ -10,7 +10,7 @@ use Livewire\Component;
 use Tests\Support\ArchitectureRules;
 
 arch('package and representative classes use strict types')
-    ->expect(['Sirius\\LaravelBuilder', 'Tests\\Fixtures\\Package', 'App'])
+    ->expect(['Sirius\\LaravelBuilder', 'Tests\\Fixtures\\Package', 'Tests\\Fixtures\\Discovery', 'App'])
     ->toUseStrictTypes();
 
 arch('actions expose a handle entry point and do not depend on Livewire')

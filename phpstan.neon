@@ -11,4 +11,5 @@ parameters:
         - tests/Support
         - tests/Fixtures/Application/app
         - tests/Fixtures/Package
+        - tests/Fixtures/Discovery
     tmpDir: .phpstan.cache

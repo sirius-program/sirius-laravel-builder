@@ -12,6 +12,7 @@ it('rejects deliberate architectural violations', function (string $layer, strin
     'definition database dependency'     => ['Definitions', 'use Illuminate\Support\Facades\DB; DB::select("select 1");', true],
     'inference filesystem dependency'    => ['Inference', 'file_get_contents("schema.json");', true],
     'pure service locator'               => ['Definitions', 'app("db");', true],
+    'definition delegates filesystem IO' => ['Definitions', 'new \\Sirius\\LaravelBuilder\\Discovery\\ClassDiscovery($files);', true],
     'package consumer coupling'          => ['Generators', 'new \App\Models\Category;', true],
     'command bypasses schema layer'      => ['Commands', '\Illuminate\Support\Facades\DB::select("select 1");', true],
     'command writes files directly'      => ['Commands', 'file_put_contents("web.php", "");', true],
@@ -21,6 +22,9 @@ it('rejects deliberate architectural violations', function (string $layer, strin
     'component nullsafe write'           => ['Livewire', '$category?->delete();', false],
     'component dynamic write'            => ['Livewire', '$category->{$method}();', false],
     'schema mutates records'             => ['Schema', '$connection->statement("delete from categories");', true],
+    'discovery queries database'         => ['Discovery', '\\Illuminate\\Support\\Facades\\DB::select("select 1");', true],
+    'discovery persists models'          => ['Discovery', '$model->save();', true],
+    'discovery opens model query'        => ['Discovery', '\\Illuminate\\Database\\Eloquent\\Model::query();', true],
     'action calls Livewire'              => ['Actions', 'new \Livewire\Component;', false],
     'action renders views'               => ['Actions', 'view("category");', false],
     'action adds a second public method' => ['Actions', 'class Bad { public function execute(): void {} }', false],
@@ -28,6 +32,10 @@ it('rejects deliberate architectural violations', function (string $layer, strin
     'missing parameter type'             => ['Definitions', 'class Bad { public function name($value): string { return $value; } }', true],
     'debugging termination'              => ['Generators', 'die("stop");', true],
 ]);
+
+it('permits model metadata dependencies in discovery', function (): void {
+    expect(ArchitectureRules::violations('<?php use Illuminate\\Database\\Eloquent\\Model; use Illuminate\\Database\\Eloquent\\SoftDeletes;', 'Discovery', true))->toBe([]);
+});
 
 it('permits reads and action delegation in components', function (): void {
     expect(ArchitectureRules::violations('<?php $category = \App\Models\Category::query()->find(1); $action->handle(["name" => "Tools"]);', 'Livewire'))->toBe([]);
