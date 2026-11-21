@@ -6,10 +6,10 @@ namespace Tests;
 
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Application;
+use Illuminate\Foundation\PackageManifest;
 use Illuminate\Support\Facades\Http;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Sirius\LaravelBuilder\SiriusLaravelBuilderServiceProvider;
 
 abstract class TestCase extends Orchestra
 {
@@ -59,7 +59,13 @@ abstract class TestCase extends Orchestra
     /** @return list<class-string> */
     protected function getPackageProviders($app): array
     {
-        return [LivewireServiceProvider::class, SiriusLaravelBuilderServiceProvider::class];
+        $files = new Filesystem;
+        $files->ensureDirectoryExists($this->sandbox . '/vendor/composer');
+        $metadata = json_decode($files->get(__DIR__ . '/../composer.json'), true, flags: JSON_THROW_ON_ERROR);
+        $files->put($this->sandbox . '/vendor/composer/installed.json', json_encode(['packages' => [$metadata]], JSON_THROW_ON_ERROR));
+        $manifest = new PackageManifest($files, $this->sandbox, $this->sandbox . '/bootstrap/cache/packages.php');
+
+        return [LivewireServiceProvider::class, ...$manifest->providers()];
     }
 
     protected function defineEnvironment($app): void

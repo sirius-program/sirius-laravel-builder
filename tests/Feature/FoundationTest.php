@@ -23,9 +23,9 @@ beforeEach(function (): void {
     });
 });
 
-it('boots the provider without registering future commands or touching records', function (): void {
+it('boots the provider and registers the command without touching records', function (): void {
     expect(app()->getProvider(SiriusLaravelBuilderServiceProvider::class))->toBeInstanceOf(SiriusLaravelBuilderServiceProvider::class);
-    expect(array_key_exists('make:crud', Artisan::all()))->toBeFalse();
+    expect(array_key_exists('make:crud', Artisan::all()))->toBeTrue();
     $this->assertDatabaseCount('categories', 0);
 });
 
