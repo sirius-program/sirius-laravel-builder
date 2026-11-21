@@ -2,7 +2,10 @@
     "preset": "laravel",
     "ignore": {
         "words": [
-            "preflight"
+            "preflight",
+            "namer",
+            "richtext",
+            "dialogs"
         ],
         "paths": []
     }
