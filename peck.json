@@ -5,7 +5,8 @@
             "preflight",
             "namer",
             "richtext",
-            "dialogs"
+            "dialogs",
+            "normalizer"
         ],
         "paths": []
     }

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Sirius\LaravelBuilder\SiriusLaravelBuilderServiceProvider;
+use Tests\Support\DatabaseConnections;
 
 beforeEach(function (): void {
     Schema::create('categories', function (Blueprint $table): void {
@@ -30,7 +31,13 @@ it('boots the provider and registers the command without touching records', func
 });
 
 it('isolates database connections and application artifacts', function (): void {
-    expect(DB::connection()->getDatabaseName())->toBe(':memory:');
+    $driver = DatabaseConnections::selectedDriver();
+    expect(DB::connection()->getDriverName())->toBe($driver);
+    if ($driver === 'sqlite') {
+        expect(DB::connection()->getDatabaseName())->toBe(':memory:');
+    } else {
+        expect(DB::connection()->getTablePrefix())->toMatch('/^builder_[a-f0-9]{24}_$/');
+    }
     expect(base_path())->toBe($this->sandbox);
     expect(array_keys(config('database.connections')))->toBe(['testing']);
     expect(app_path())->toBe($this->sandbox . '/app');

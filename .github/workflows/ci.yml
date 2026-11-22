@@ -100,3 +100,87 @@ jobs:
 
             - name: Run tests
               run: composer test
+
+    database-matrix:
+        name: Full tests (${{ matrix.database }})
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                database: [sqlite, mysql, mariadb, pgsql]
+        services:
+            mysql:
+                image: mysql:8.4
+                env:
+                    MYSQL_DATABASE: sirius_builder_test
+                    MYSQL_USER: sirius_test
+                    MYSQL_PASSWORD: ci-only-password
+                    MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+                ports:
+                    - 3308:3306
+                options: >-
+                    --health-cmd "mysqladmin ping -h localhost"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 10
+            postgres:
+                image: postgres:17
+                env:
+                    POSTGRES_DB: sirius_builder_test
+                    POSTGRES_USER: sirius_test
+                    POSTGRES_PASSWORD: ci-only-password
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U sirius_test -d sirius_builder_test"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+            mariadb:
+                image: mariadb:11.4
+                env:
+                    MARIADB_DATABASE: sirius_builder_test
+                    MARIADB_USER: sirius_test
+                    MARIADB_PASSWORD: ci-only-password
+                    MARIADB_RANDOM_ROOT_PASSWORD: 'yes'
+                ports:
+                    - 3307:3306
+                options: >-
+                    --health-cmd "healthcheck.sh --connect --innodb_initialized"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+        env:
+            BUILDER_TEST_DRIVER: ${{ matrix.database }}
+            BUILDER_TEST_MYSQL_HOST: 127.0.0.1
+            BUILDER_TEST_MYSQL_PORT: 3308
+            BUILDER_TEST_MYSQL_DATABASE: sirius_builder_test
+            BUILDER_TEST_MYSQL_USERNAME: sirius_test
+            BUILDER_TEST_MYSQL_PASSWORD: ci-only-password
+            BUILDER_TEST_PGSQL_HOST: 127.0.0.1
+            BUILDER_TEST_PGSQL_PORT: 5432
+            BUILDER_TEST_PGSQL_DATABASE: sirius_builder_test
+            BUILDER_TEST_PGSQL_USERNAME: sirius_test
+            BUILDER_TEST_PGSQL_PASSWORD: ci-only-password
+            BUILDER_TEST_MARIADB_HOST: 127.0.0.1
+            BUILDER_TEST_MARIADB_PORT: 3307
+            BUILDER_TEST_MARIADB_DATABASE: sirius_builder_test
+            BUILDER_TEST_MARIADB_USERNAME: sirius_test
+            BUILDER_TEST_MARIADB_PASSWORD: ci-only-password
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.3'
+                  extensions: pdo_pgsql, pdo_mysql, pdo_sqlite
+                  coverage: none
+
+            - name: Install PHP dependencies
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            - name: Install Aspell
+              run: sudo apt-get update && sudo apt-get install -y aspell aspell-en
+
+            - name: Run complete checks on selected database
+              run: composer test

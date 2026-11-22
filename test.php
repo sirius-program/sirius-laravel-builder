@@ -13,6 +13,14 @@ try {
     runRefactorChecking();
     runTests();
 
+    if (getenv('BUILDER_TEST_DRIVER') !== false) {
+        runCommand(
+            message: 'Running selected-engine schema tests...',
+            command: 'composer test:database',
+            failureMessage: 'Selected-engine schema tests failed.',
+        );
+    }
+
     echoSuccess('All checks passed!' . "\n");
 } catch (Throwable $throwable) {
     echoError($throwable->getMessage() . "\n");

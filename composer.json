@@ -93,6 +93,9 @@
         ],
         "prepare": [
             "@php vendor/bin/testbench package:discover --ansi"
+        ],
+        "test:database": [
+            "@php vendor/bin/pest --configuration=phpunit.database.xml --compact"
         ]
     },
     "config": {

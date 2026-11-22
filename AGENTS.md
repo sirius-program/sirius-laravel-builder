@@ -22,7 +22,7 @@
 
 - Run architecture checks before feature work. Update architecture rules intentionally as the design evolves, not to suppress defects.
 - `tests/Fixtures/Application` is a handwritten representative app, not output from a working generator. `tests/Fixtures/Package` supplies nonempty pure-layer examples. Extend checks to actual generated output when generation exists.
-- Tests must use the isolated Testbench environment and SQLite memory connection, never application credentials or production databases. Outbound HTTP is blocked unless explicitly faked.
+- Ordinary tests must use the isolated Testbench environment and SQLite memory connection, never application credentials or production databases. Opt-in real-engine schema tests follow the Environment file ownership rules below. Outbound HTTP is blocked unless explicitly faked.
 - Test observable behavior with real database queries. Use negative witnesses for architectural constraints; do not rely on snapshots alone.
 - Static guardrails cannot prove absence of all dynamic side effects. Retain behavioral action/component tests and code review.
 - `composer test` runs Pint, Larastan/PHPStan, and all Pest suites. Use `composer test:arch`, `test:unit`, or `test:feature` for focused feedback, followed by the full gate.
@@ -44,3 +44,16 @@
 - Group related rules into clearly named English section comments (for example, `/* Toast */` or `/* Card */`). Leave one blank line after each section comment.
 - Keep selector order, specificity, declaration order, values, and responsive behavior intact during formatting-only refactors.
 - Parse/check authored CSS after edits and run the frontend build and affected browser checks when available.
+
+## Environment file ownership
+
+- Only the owner may create or edit `.env` files, including `.env.database`, `.env.testing`, and other environment-specific variants. AI agents must never write, overwrite, copy into, or delete these files, directly or through installers/scripts.
+- Document required variables and ask the owner to configure them manually. Never print credentials or copy them into logs, documentation, tests, or committed files.
+- Pause work dependent on missing local database configuration until the owner confirms it is ready. Do not substitute application credentials.
+- Ordinary package tests continue using isolated Testbench with SQLite memory. Explicit Phase 3 engine tests may use only owner-configured disposable local test databases or ephemeral CI service databases, through dedicated `BUILDER_TEST_*` variables. Never use a consumer application's database; never drop an entire database. Cleanup is limited to artifacts created by that test run.
+
+## Explicit database matrix tests
+
+- Without `BUILDER_TEST_DRIVER`, ordinary `composer test` remains SQLite-only. An explicit process/CI selector (`sqlite`, `mysql`, `mariadb`, `pgsql`) authorizes the full test gate on that disposable test connection and adds its schema acceptance tests.
+- Feature tests must actually use the selected connection; changing only CI environment values is insufficient. SQLite-specific behavior tests may use a separate explicitly named SQLite connection.
+- Each feature test uses a unique table prefix on external engines; cleanup is confined to that prefix. Continue using only owner-configured `BUILDER_TEST_*` credentials, never application credentials, and never edit environment files.

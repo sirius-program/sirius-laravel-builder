@@ -4,3 +4,4 @@
 /.pest/
 /.env
 /composer.lock
+/.env.*
