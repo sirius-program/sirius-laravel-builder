@@ -17,16 +17,16 @@ final class MakeCrudCommand extends Command
     {
         $errors = $preflight->errors();
         foreach ($errors as $error) {
-            $this->error($error);
+            $this->components->error($error);
         }
         if ($errors !== []) {
             return self::FAILURE;
         }
-        $this->info('CRUD prerequisites are ready. No files or database records were changed.');
+        $this->components->info('CRUD prerequisites are ready. No files or database records were changed.');
         if ($this->option('check')) {
             return self::SUCCESS;
         }
-        $this->warn('CRUD generation is not available in this milestone. Use --check to verify setup.');
+        $this->components->warn('CRUD generation is not available in this milestone. Use --check to verify setup.');
 
         return self::FAILURE;
     }

@@ -8,6 +8,26 @@ permissions:
     contents: read
 
 jobs:
+    windows-sqlite:
+        name: Native Windows full tests (SQLite)
+        runs-on: windows-latest
+        env:
+            BUILDER_TEST_DRIVER: sqlite
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.3'
+                  extensions: pdo_sqlite, mbstring
+                  coverage: none
+
+            - name: Install PHP dependencies
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            - name: Run complete checks on native Windows
+              run: composer test
+
     quality:
         runs-on: ubuntu-latest
 

@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Sirius\LaravelBuilder\Schema\ConnectionCheck;
 use Sirius\LaravelBuilder\SiriusLaravelBuilderServiceProvider;
 use Sirius\LaravelBuilder\Support\Preflight;
+use Symfony\Component\Console\Output\BufferedOutput;
 
 it('checks prerequisites without writing files or executing record queries', function (): void {
     $before = hash_file('sha256', base_path('routes/web.php'));
@@ -32,6 +34,25 @@ it('loads package defaults and respects application configuration overrides', fu
 
 it('does not claim generation is implemented', function (): void {
     $this->artisan('make:crud')->expectsOutputToContain('not available in this milestone')->assertFailed();
+});
+
+it('renders plain command messages without ANSI escapes or leaking markup', function (): void {
+    config()->set('sirius-builder.paths.models', 'missing-<b>models</b>');
+    $output = new BufferedOutput;
+
+    $status = Artisan::call('make:crud', ['--check' => true, '--no-ansi' => true], $output);
+
+    expect($status)->toBe(1)
+        ->and($output->fetch())->toContain('missing-<b>models</b>')->not->toContain("\033[");
+});
+
+it('respects quiet command output', function (): void {
+    $output = new BufferedOutput;
+
+    $status = Artisan::call('make:crud', ['--check' => true, '--quiet' => true], $output);
+
+    expect($status)->toBe(0)
+        ->and($output->fetch())->toBe('');
 });
 
 it('reports invalid application paths', function (string $key, mixed $value, string $message): void {
