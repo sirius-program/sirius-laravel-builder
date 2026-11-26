@@ -46,10 +46,10 @@ final class DatabaseConnections
         }
 
         return [
-            'driver'    => $driver, 'host' => $values['HOST'], 'port' => $values['PORT'],
-            'database'  => $values['DATABASE'], 'username' => $values['USERNAME'], 'password' => $values['PASSWORD'],
-            'prefix'    => '', 'charset' => $driver === 'pgsql' ? 'utf8' : 'utf8mb4',
-            'collation' => 'utf8mb4_unicode_ci', 'search_path' => 'public', 'sslmode' => 'prefer',
+            'driver'         => $driver, 'host' => $values['HOST'], 'port' => $values['PORT'],
+            'database'       => $values['DATABASE'], 'username' => $values['USERNAME'], 'password' => $values['PASSWORD'],
+            'prefix'         => '', 'charset' => $driver === 'pgsql' ? 'utf8' : 'utf8mb4',
+            'prefix_indexes' => true, 'collation' => 'utf8mb4_unicode_ci', 'search_path' => 'public', 'sslmode' => 'prefer',
         ];
     }
 }

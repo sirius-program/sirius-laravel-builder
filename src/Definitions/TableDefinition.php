@@ -12,5 +12,5 @@ final readonly class TableDefinition
      * @param  list<ForeignKeyDefinition>  $foreignKeys
      * @param  list<string>  $warnings
      */
-    public function __construct(public string $connection, public string $driver, public string $table, public string $key, public array $columns, public array $indexes, public array $foreignKeys, public array $warnings) {}
+    public function __construct(public string $connection, public string $driver, public string $table, public string $key, public array $columns, public array $indexes, public array $foreignKeys, public array $warnings, public string $prefix = '') {}
 }

@@ -34,7 +34,8 @@ final readonly class SchemaInspector
             if ($raw === []) {
                 throw new SchemaInspectionException('The selected table is missing or has no visible columns. Check the model table, connection, and metadata permissions.');
             }
-            $indexes = array_map(static fn (array $index): IndexDefinition => new IndexDefinition($index['name'], $index['columns'], $index['unique'], $index['primary'], $index['type']), $schema->getIndexes($resolved));
+            $evidence = (new IndexEvidence)->inspect($connection, $resolved);
+            $indexes = array_map(static fn (array $index): IndexDefinition => new IndexDefinition($index['name'], $index['columns'], $index['unique'], $index['primary'], $index['type'], $evidence[$index['name']] ?? false), $schema->getIndexes($resolved));
             $primary = array_values(array_filter($indexes, static fn (IndexDefinition $index): bool => $index->primary));
             if (count($primary) !== 1 || count($primary[0]->columns) !== 1) {
                 throw new SchemaInspectionException('CRUD requires a single-column primary key; missing or composite primary keys are unsupported.');
@@ -74,7 +75,7 @@ final readonly class SchemaInspector
                 $warnings[] = 'SQLite type affinity and CHECK constraints do not reliably expose enum values or enforce declared lengths/decimal precision.';
             }
 
-            return new TableDefinition($connection->getName(), $driver, $resolved, $key, $columns, $indexes, $foreignKeys, $warnings);
+            return new TableDefinition($connection->getName(), $driver, $resolved, $key, $columns, $indexes, $foreignKeys, $warnings, $connection->getTablePrefix());
         } catch (SchemaInspectionException $exception) {
             throw $exception;
         } catch (Throwable) {
