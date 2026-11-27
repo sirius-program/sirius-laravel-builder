@@ -85,7 +85,7 @@ final readonly class ResourceArtifacts
                 $this->stubs->render('livewire', ['namespace' => $id->livewireNamespace, 'class' => $class, 'members' => $members, 'view' => var_export($id->viewName . '.' . $page, true)])
             );
 
-            $content = '<h1>' . e(Str::headline(str_replace('\\', ' ', $owner)) . ' — ' . ucfirst($page)) . '</h1>';
+            $content = '<h1>' . e(Str::headline(str_replace('\\', ' ', $owner)) . ' â€” ' . ucfirst($page)) . '</h1>';
             if (in_array($page, ['create', 'edit'], true)) {
                 $content .= "\n" . $form;
             }
@@ -137,32 +137,59 @@ final readonly class ResourceArtifacts
             $this->file(
                 $manifest,
                 'app/Actions/' . $path . '/' . $class . '.php',
-                $this->stubs->render('action', ['namespace' => $id->actionNamespace, 'class' => $class, 'parameters' => '', 'return_type' => 'never', 'body' => "throw new \\LogicException('Persistence has not been implemented.');"])
+                (new ActionRenderer($this->stubs))->render($resource, $op, $class)
             );
         }
 
         if ($scaffold) {
             $policy = str_replace('\\', '/', $resource->model->relativeName) . 'Policy';
             $ns = 'App\\Policies' . (dirname($policy) === '.' ? '' : '\\' . str_replace('/', '\\', dirname($policy)));
-            $this->file(
-                $manifest,
-                'app/Policies/' . $policy . '.php',
-                "<?php\n\ndeclare(strict_types=1);\n\nnamespace " . $ns . ";\n\nfinal class " . basename($policy) . "\n{\n    public function before(): bool { return false; }\n}\n"
-            );
+            $policyPath = 'app/Policies/' . $policy . '.php';
+
+            if ($manifest->read($policyPath) !== null) {
+                $manifest->blockers[] = 'Existing policy must be configured manually: ' . $policyPath;
+            } else {
+                $abilities = ['viewAny', 'view'];
+                foreach ($resource->operations->selected as $operation) {
+                    $abilities[] = $operation === Operation::PermanentDelete ? 'forceDelete' : $operation->value;
+                }
+
+                $methods = [];
+                foreach ($abilities as $ability) {
+                    $parameters = '\Illuminate\Contracts\Auth\Authenticatable $user' . (in_array($ability, ['viewAny', 'create'], true) ? '' : ', ' . $model . ' $record');
+                    $methods[] = '    public function ' . $ability . '(' . $parameters . "): bool\n    {\n        return false;\n    }";
+                }
+
+                $this->file(
+                    $manifest,
+                    $policyPath,
+                    $this->stubs->render('policy', [
+                        'namespace' => $ns,
+                        'class'     => basename($policy),
+                        'methods'   => implode("\n\n", $methods),
+                    ])
+                );
+            }
         }
 
         $index = var_export($id->routes->namePrefix . 'index', true);
         $this->file(
             $manifest,
             $id->testPath . '/ResourceTest.php',
-            $this->stubs->render('pest', ['description' => var_export('registers ' . $owner . ' routes', true), 'body' => 'expect(\\Illuminate\\Support\\Facades\\Route::has(' . $index . '))->toBeTrue();'])
+            $this->stubs->render('pest', [
+                'description' => var_export('registers ' . $owner . ' routes', true),
+                'body'        => 'expect(\\Illuminate\\Support\\Facades\\Route::has(' . $index . '))->toBeTrue();',
+            ])
         );
 
         if ($browser) {
             $this->file(
                 $manifest,
                 'tests/Browser/Crud/' . $path . '/ResourceTest.php',
-                $this->stubs->render('pest', ['description' => var_export('opens ' . $owner, true), 'body' => 'visit(route(' . $index . '))->assertNoJavaScriptErrors();'])
+                $this->stubs->render('pest', [
+                    'description' => var_export('opens ' . $owner, true),
+                    'body'        => 'visit(route(' . $index . '))->assertNoJavaScriptErrors();',
+                ])
             );
         }
 

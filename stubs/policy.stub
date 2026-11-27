@@ -1,0 +1,11 @@
+<?php
+
+declare(strict_types=1);
+
+namespace %{namespace}%;
+
+// Allow each ability only after defining the application's access rules.
+final class %{class}%
+{
+%{methods}%
+}

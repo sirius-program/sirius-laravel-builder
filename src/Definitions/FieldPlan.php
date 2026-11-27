@@ -12,6 +12,11 @@ final readonly class FieldPlan
      */
     public function __construct(public ColumnDefinition $column, public FieldDefinition $field, public ValidationDefinition $validation, public ?FieldDefinition $confirmation = null, public array $options = [], public ?string $cast = null, public array $warnings = [], public string $driver = 'unknown') {}
 
+    public function usesJson(): bool
+    {
+        return $this->column->type === 'json' || in_array($this->cast, ['array', 'json', 'object', 'collection'], true);
+    }
+
     public function withValidation(ValidationDefinition $validation): self
     {
         $field = new FieldDefinition($this->field->column, $this->field->label, $this->field->type, $validation->rules(false), $this->field->writable, $this->field->endpoint, $this->field->enum);

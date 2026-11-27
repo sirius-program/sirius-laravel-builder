@@ -10,6 +10,7 @@ use RuntimeException;
 final class StubRenderer
 {
     private const array TOKENS = [
+        'policy'     => ['namespace', 'class', 'methods'],
         'action'     => ['namespace', 'class', 'parameters', 'return_type', 'body'],
         'livewire'   => ['namespace', 'class', 'members', 'view'],
         'view'       => ['content'],
@@ -73,7 +74,7 @@ final class StubRenderer
         }
 
         $result = preg_replace_callback($pattern, static fn (array $match): string => $values[$match[1]], $stub);
-        if (in_array($name, ['action', 'livewire', 'pest', 'breadcrumb'], true)) {
+        if (in_array($name, ['policy', 'action', 'livewire', 'pest', 'breadcrumb'], true)) {
             try {
                 $tokens = token_get_all(($name === 'breadcrumb' ? '<?php ' : '') . $result, TOKEN_PARSE);
                 if (($tokens[0][0] ?? null) !== T_OPEN_TAG) {

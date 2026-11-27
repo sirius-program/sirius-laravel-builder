@@ -16,34 +16,42 @@ use Sirius\LaravelBuilder\Inference\ValueNormalizer;
 final class FieldValidation
 {
     /** @return list<mixed> */
-    public function rules(FieldPlan $plan, string $timezone, bool $updating = false, ?Model $trustedRecord = null, ?ValidationDefinition $edited = null): array
+    public function rules(FieldPlan $plan, string $timezone, bool $updating = false, ?Model $trustedRecord = null, ?ValidationDefinition $edited = null, ?string $connection = null): array
     {
         if (!$plan->field->writable) {
             return ['prohibited'];
         }
+
         $definition = $edited ?? $plan->validation;
         $rules = $definition->rules($updating);
+
         foreach ($definition->constraints as $constraint) {
             if ($constraint->kind === 'in') {
                 $rules[] = Rule::in($constraint->values);
 
                 continue;
             }
-            $table = $constraint->connection . '.' . $constraint->table;
+
+            $constraintConnection = $connection ?? $constraint->connection;
+            $table = $constraintConnection . '.' . $constraint->table;
+
             if ($constraint->kind === 'exists') {
                 $rules[] = Rule::exists($table, $constraint->column);
 
                 continue;
             }
+
             $rule = Rule::unique($table, $constraint->column);
             if ($updating) {
-                if (!$trustedRecord instanceof Model || !$trustedRecord->exists || $trustedRecord->getKey() === null || $trustedRecord->getTable() !== $constraint->table || $trustedRecord->getKeyName() !== $constraint->key || $trustedRecord->getConnection()->getName() !== $constraint->connection) {
+                if (!$trustedRecord instanceof Model || !$trustedRecord->exists || $trustedRecord->getKey() === null || $trustedRecord->getTable() !== $constraint->table || $trustedRecord->getKeyName() !== $constraint->key || $trustedRecord->getConnection()->getName() !== $constraintConnection) {
                     throw new InvalidArgumentException('Update uniqueness requires the trusted, server-resolved existing model on the matching table and connection.');
                 }
                 $rule->ignore($trustedRecord);
             }
+
             $rules[] = $rule;
         }
+
         $rules[] = static function (string $attribute, mixed $value, Closure $fail) use ($plan, $timezone): void {
             try {
                 (new ValueNormalizer)->normalize($plan, $value, $timezone);
