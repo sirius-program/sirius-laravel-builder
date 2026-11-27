@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Console\OutputStyle;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Prompts\Key;
 use Laravel\Prompts\Prompt;
@@ -131,3 +132,29 @@ it('requests only the endpoint for a plain select and accepts an empty source', 
     expect($tester->execute([]))->toBe(0)
         ->and($tester->getDisplay())->toContain('Options: configure manually')->not->toContain('Password confirmation label');
 });
+
+it('keeps review sections and field details readable with and without ANSI', function (bool $decorated): void {
+    $name = prepareWizardModel();
+    Schema::table('wizard_entries', static function (Blueprint $table): void {
+        $table->string('username');
+        $table->string('nickname');
+    });
+
+    Route::get('/members', static fn (): string => 'Existing page');
+    $tester = new CommandTester(Artisan::all()['make:crud']);
+    $tester->setInputs([$name, $name, '', '', 'no', 'yes', 'Username', 'text', '', '', '', 'yes', 'Alias <info>', 'text', '', '', '', 'dialogs', 'create', '/members', '', 'yes', 'no', 'no', 'Cancel']);
+    expect($tester->execute([], ['decorated' => $decorated]))->toBe(0);
+    $display = $tester->getDisplay(true);
+    $plain = preg_replace('/\x1b\[[0-9;]*m/', '', $display);
+    $start = strrpos($plain, 'Review resource');
+    $review = substr($plain, $start);
+
+    expect($review)->toMatch('/\n\nResource\n  .*?\n\nAccess\n  .*?\n\nFields & validation\n  username — Username \(text\)\n    Create: [^\n]+\n    Update: [^\n]+\n\n  nickname — Alias <info> \(text\).*?\n\nRoutes & breadcrumbs\n  GET \/members .*?\n\nPlanned files\n  .*?\n\nWarnings & conflicts\n  /s')
+        ->toContain('Route conflict: members');
+
+    if ($decorated) {
+        expect($display)->toMatch('/\x1b\[[0-9;]+mFields & validation\x1b\[/')->toMatch('/\x1b\[[0-9;]+musername\x1b\[/');
+    } else {
+        expect($display)->not->toContain("\033[");
+    }
+})->with([false, true]);
