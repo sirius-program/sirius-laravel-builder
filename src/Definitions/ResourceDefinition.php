@@ -22,6 +22,7 @@ final readonly class ResourceDefinition
         public array $fields = [],
         public array $artifacts = [],
         public array $fieldPlans = [],
+        public ?string $breadcrumbTarget = null,
     ) {
         new OperationSelection($model->softDeletes, $operations->selected);
         if ($fieldPlans !== [] && array_map(static fn (FieldPlan $plan): FieldDefinition => $plan->field, $fieldPlans) != $fields) {

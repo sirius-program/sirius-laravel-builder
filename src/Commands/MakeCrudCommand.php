@@ -22,11 +22,23 @@ final class MakeCrudCommand extends Command
         if ($errors !== []) {
             return self::FAILURE;
         }
+
         $this->components->info('CRUD prerequisites are ready. No files or database records were changed.');
         if ($this->option('check')) {
             return self::SUCCESS;
         }
-        $this->components->warn('CRUD generation is not available in this milestone. Use --check to verify setup.');
+
+        if (!$this->input->isInteractive()) {
+            $this->components->error('An interactive terminal is required for the CRUD wizard.');
+
+            return self::FAILURE;
+        }
+
+        try {
+            return app(CrudWizard::class)->run($this->output);
+        } catch (\InvalidArgumentException|\RuntimeException $exception) {
+            $this->components->error($exception->getMessage());
+        }
 
         return self::FAILURE;
     }

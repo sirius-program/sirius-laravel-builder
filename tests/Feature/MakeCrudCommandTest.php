@@ -32,8 +32,8 @@ it('loads package defaults and respects application configuration overrides', fu
         ->and(config('sirius-builder.paths.models'))->toBe('app/Models');
 });
 
-it('does not claim generation is implemented', function (): void {
-    $this->artisan('make:crud')->expectsOutputToContain('not available in this milestone')->assertFailed();
+it('rejects unattended wizard runs', function (): void {
+    $this->artisan('make:crud --no-interaction')->expectsOutputToContain('interactive terminal')->assertFailed();
 });
 
 it('renders plain command messages without ANSI escapes or leaking markup', function (): void {

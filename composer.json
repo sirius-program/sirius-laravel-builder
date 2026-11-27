@@ -28,6 +28,8 @@
     ],
     "require": {
         "php": "^8.3",
+        "laravel/prompts": "^0.3",
+        "nunomaduro/termwind": "^2.0",
         "illuminate/support": "^12.61.1 || ^13.12.0",
         "sirius/ui": "0.1.0"
     },
