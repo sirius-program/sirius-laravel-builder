@@ -10,6 +10,7 @@ use Illuminate\Foundation\PackageManifest;
 use Illuminate\Support\Facades\Http;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
+use Sirius\Ui\SiriusUiServiceProvider;
 use Tests\Support\DatabaseConnections;
 
 abstract class TestCase extends Orchestra
@@ -84,7 +85,7 @@ abstract class TestCase extends Orchestra
         $files->put($this->sandbox . '/vendor/composer/installed.json', json_encode(['packages' => [$metadata]], JSON_THROW_ON_ERROR));
         $manifest = new PackageManifest($files, $this->sandbox, $this->sandbox . '/bootstrap/cache/packages.php');
 
-        return [LivewireServiceProvider::class, ...$manifest->providers()];
+        return [LivewireServiceProvider::class, SiriusUiServiceProvider::class, ...$manifest->providers()];
     }
 
     protected function defineEnvironment($app): void

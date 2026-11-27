@@ -9,9 +9,9 @@ use Sirius\LaravelBuilder\Support\Preflight;
 
 final class MakeCrudCommand extends Command
 {
-    protected $signature = 'make:crud {--check : Check prerequisites without generating files}';
+    protected $signature = 'make:crud {--check : Check prerequisites without generating files} {--dry-run : Preview generation without writing files}';
 
-    protected $description = 'Prepare an action-based Sirius UI CRUD resource (generation is not available yet)';
+    protected $description = 'Generate an action-based Sirius UI resource scaffold';
 
     public function handle(Preflight $preflight): int
     {
@@ -35,7 +35,7 @@ final class MakeCrudCommand extends Command
         }
 
         try {
-            return app(CrudWizard::class)->run($this->output);
+            return app(CrudWizard::class)->run($this->output, (bool) $this->option('dry-run'));
         } catch (\InvalidArgumentException|\RuntimeException $exception) {
             $this->components->error($exception->getMessage());
         }

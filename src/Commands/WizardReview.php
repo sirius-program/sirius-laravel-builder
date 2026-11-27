@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace Sirius\LaravelBuilder\Commands;
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Str;
-use Sirius\LaravelBuilder\Definitions\Layout;
-use Sirius\LaravelBuilder\Definitions\Operation;
 use Sirius\LaravelBuilder\Definitions\ResourceDefinition;
 use Sirius\LaravelBuilder\Definitions\TableDefinition;
+use Sirius\LaravelBuilder\Generators\ArtifactManifest;
 use Sirius\LaravelBuilder\Inference\FieldPlanner;
-use Sirius\LaravelBuilder\Support\SelectedModel;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -19,7 +15,7 @@ use function Termwind\parse;
 
 final class WizardReview
 {
-    public function display(OutputInterface $output, ResourceDefinition $resource, TableDefinition $table, SelectedModel $model, bool $scaffold, bool $browser, string $breadcrumb): void
+    public function display(OutputInterface $output, ResourceDefinition $resource, TableDefinition $table, ArtifactManifest $manifest, bool $scaffold, string $breadcrumb): void
     {
         $identity = $resource->identity;
         $output->writeln(parse('<b>Review resource</b>'));
@@ -77,62 +73,17 @@ final class WizardReview
             $warnings[] = 'Supply omitted required column: ' . $column;
         }
 
-        $routeLines = [];
-        $pages = ['index' => ''];
-        if ($resource->layout === Layout::Pages) {
-            $record = '{record:' . $model->routeKey() . '}';
-            if ($resource->operations->includes(Operation::Create)) {
-                $pages['create'] = '/create';
-            }
-            $pages['show'] = '/' . $record;
-            if ($resource->operations->includes(Operation::Update)) {
-                $pages['edit'] = '/' . $record . '/edit';
-            }
-        }
-
-        $path = str_replace('\\', '/', $identity->name);
-        $files = ['app/Livewire/' . $path . '/ResourceTable.php', $identity->testPath . '/ResourceTest.php'];
-        foreach ($pages as $page => $suffix) {
-            $uri = $identity->routes->urlPrefix . $suffix;
-            $name = $identity->routes->namePrefix . $page;
-            $routeLines[] = 'GET ' . $uri . ' ' . $name;
-
-            foreach (Route::getRoutes()->getRoutes() as $route) {
-                if ($route->getName() === $name || (in_array('GET', $route->methods(), true) && preg_replace('/\{[^}]+\}/', '{}', $route->uri()) === preg_replace('/\{[^}]+\}/', '{}', trim($uri, '/')))) {
-                    $warnings[] = 'Route conflict: ' . $route->uri() . ' ' . $route->getName();
-                }
-            }
-
-            if ($resource->breadcrumbTarget !== null) {
-                $routeLines[] = 'Trail ' . $name . ' parent: ' . ($page === 'index' ? 'root' : $identity->routes->namePrefix . 'index');
-            }
-
-            $files[] = 'app/Livewire/' . $path . '/' . ucfirst($page) . 'Page.php';
-            $files[] = $identity->viewPath . '/' . $page . '.blade.php';
-        }
-
-        foreach ($resource->operations->selected as $operation) {
-            $files[] = 'app/Actions/' . $path . '/' . Str::studly($operation->value) . 'Action.php';
-        }
-
-        if ($browser) {
-            $files[] = 'tests/Browser/Crud/' . $path . '/ResourceTest.php';
-        }
-
-        if ($scaffold) {
-            $files[] = 'app/Policies/' . str_replace('\\', '/', $resource->model->relativeName) . 'Policy.php';
-        }
-
         $this->heading($output, 'Routes & breadcrumbs');
-        $this->items($output, [...$routeLines, 'Breadcrumbs: ' . $breadcrumb]);
-
+        $this->items($output, [...$manifest->routes, 'Breadcrumbs: ' . $breadcrumb]);
         $this->heading($output, 'Planned files');
-        foreach ($files as $file) {
-            if (file_exists(base_path($file))) {
-                $warnings[] = 'File conflict: ' . $file;
-            }
+        foreach ($manifest->files as $path => $entry) {
+            $status = $entry['before'] === null ? 'Create' : ($entry['after'] === $entry['before'] ? 'Unchanged' : 'Update');
+            $this->items($output, [$status . ' ' . $path]);
         }
-        $this->items($output, [...$files, 'Update routes: ' . config('sirius-builder.paths.routes')]);
+        foreach ($manifest->overwrites() as $path) {
+            $warnings[] = 'File conflict: ' . $path;
+        }
+        array_push($warnings, ...$manifest->blockers);
         if ($warnings !== []) {
             $this->heading($output, 'Warnings & conflicts');
             $this->items($output, $warnings);

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Diglactic\Breadcrumbs\Manager;
 use Illuminate\Console\OutputStyle;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
@@ -30,7 +31,7 @@ it('reviews the resource through the console and leaves the application untouche
     }
 
     $tester->setInputs([...$inputs, $transition === 'Generate' ? 'Generate' : 'Cancel']);
-    expect($tester->execute([]))->toBe($transition === 'Generate' ? 1 : 0);
+    expect($tester->execute([]))->toBe(0);
     $display = $tester->getDisplay();
     expect($display)->toContain('Review resource', 'wizard_entries', '.show', 'CreateAction.php')->not->toContain("\033[");
 
@@ -39,26 +40,10 @@ it('reviews the resource through the console and leaves the application untouche
         expect($last)->toContain('Layout: dialogs', 'DeleteAction.php')->not->toContain('.show', 'CreateAction.php');
     }
 
-    expect(file_get_contents(base_path('routes/web.php')))->toBe($before)
-        ->and(is_dir(app_path('Livewire/' . $name)))->toBeFalse()
+    expect(file_get_contents(base_path('routes/web.php')) !== $before)->toBe($transition === 'Generate')
+        ->and(is_dir(app_path('Livewire/' . $name)))->toBe($transition === 'Generate')
         ->and(DB::table('wizard_entries')->count())->toBe(0);
 })->with(['Cancel', 'Restart', 'Edit', 'Generate']);
-
-function prepareWizardModel(): string
-{
-    $name = 'Entry' . bin2hex(random_bytes(4));
-    $directory = app_path('WizardModels');
-    mkdir($directory);
-    $source = $directory . '/' . $name . '.php';
-    file_put_contents($source, '<?php namespace App\Models; final class ' . $name . ' extends \Illuminate\Database\Eloquent\Model { protected $table = "wizard_entries"; }');
-    require $source;
-    config()->set('sirius-builder.paths.models', 'app/WizardModels');
-    Schema::create('wizard_entries', static function (Blueprint $table): void {
-        $table->id();
-    });
-
-    return $name;
-}
 
 it('accepts a read-only preview using rich keyboard prompts', function (): void {
     prepareWizardModel();
@@ -66,6 +51,7 @@ it('accepts a read-only preview using rich keyboard prompts', function (): void 
     $enter = Key::ENTER;
     Prompt::fake([Key::DOWN, ...array_fill(0, 13, $enter)]);
     $output = new BufferedOutput;
+
     try {
         expect((new CrudWizard)->run(new OutputStyle(new ArrayInput([]), $output)))->toBe(0)
             ->and($output->fetch())->toContain('Review resource', 'wizard_entries');
@@ -82,28 +68,35 @@ it('rejects empty model discovery before prompting', function (): void {
 
 it('selects an existing breadcrumb file without executing its contents', function (string $mode): void {
     $name = prepareWizardModel();
-    app()->bind('Diglactic\Breadcrumbs\Manager', static fn (): stdClass => new stdClass);
+    app()->singleton(Manager::class);
     $one = base_path('routes/breadcrumbs.php');
     $two = base_path('routes/second.php');
+
     if ($mode !== 'missing') {
-        file_put_contents($one, '<?php throw new Exception;');
+        file_put_contents($one, '<?php file_put_contents(__DIR__."/executed", "yes");');
     }
+
     if ($mode === 'multiple' || $mode === 'custom') {
-        file_put_contents($two, '<?php throw new Exception;');
+        file_put_contents($two, '<?php file_put_contents(__DIR__."/executed", "yes");');
     }
+
     config()->set('breadcrumbs.files', match ($mode) {
         'disabled' => false,'multiple' => [$one, $two],'custom' => $two,default => $one
     });
+
     $tester = new CommandTester(Artisan::all()['make:crud']);
     $answers = [$name, $name, '', '', 'no', 'pages', 'create', '', '', 'yes', 'no', 'no'];
     if ($mode === 'multiple') {
         $answers[] = 'routes/second.php';
     }
+
     $tester->setInputs([...$answers, 'Cancel']);
+
     expect($tester->execute([]))->toBe(0)
         ->and($tester->getDisplay())->toContain('Breadcrumbs: ' . match ($mode) {
             'missing' => 'default file missing','disabled' => 'disabled','custom','multiple' => 'routes/second.php',default => 'routes/breadcrumbs.php'
         });
+    expect(is_file(base_path('routes/executed')))->toBeFalse();
 })->with(['missing', 'disabled', 'default', 'custom', 'multiple']);
 
 it('keeps a custom password confirmation label when editing a field', function (): void {
@@ -111,11 +104,13 @@ it('keeps a custom password confirmation label when editing a field', function (
     Schema::table('wizard_entries', static function (Blueprint $table): void {
         $table->string('secret');
     });
+
     $tester = new CommandTester(Artisan::all()['make:crud']);
     $tester->setInputs([
         $name, $name, '', '', 'no', 'yes', 'Passphrase', 'password', 'Repeat passphrase', 'bad||rules', '', '', '', '', '',
         'pages', 'create', '', '', 'yes', 'no', 'no', 'Edit a section', 'Fields', 'no', 'yes', 'New label', '', '', '', '', '', 'Cancel',
     ]);
+
     $status = $tester->execute([]);
     expect($status)->toBe(0, $tester->getDisplay());
     $last = substr($tester->getDisplay(), strrpos($tester->getDisplay(), 'Review resource'));
@@ -127,8 +122,10 @@ it('requests only the endpoint for a plain select and accepts an empty source', 
     Schema::table('wizard_entries', static function (Blueprint $table): void {
         $table->integer('owner_id');
     });
+
     $tester = new CommandTester(Artisan::all()['make:crud']);
     $tester->setInputs([$name, $name, '', '', 'no', 'yes', '', 'select', '', '', '', '', 'dialogs', 'delete', '', '', 'yes', 'no', 'no', 'Cancel']);
+
     expect($tester->execute([]))->toBe(0)
         ->and($tester->getDisplay())->toContain('Options: configure manually')->not->toContain('Password confirmation label');
 });

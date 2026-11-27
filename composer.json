@@ -34,6 +34,7 @@
         "sirius/ui": "0.1.0"
     },
     "require-dev": {
+        "diglactic/laravel-breadcrumbs": "^10.1",
         "larastan/larastan": "^3.0",
         "laravel/pint": "^1.24",
         "livewire/livewire": "^4.0",

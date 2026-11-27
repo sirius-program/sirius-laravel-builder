@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sirius\LaravelBuilder\Commands;
 
+use Diglactic\Breadcrumbs\Manager;
 use Illuminate\Console\OutputStyle;
 use Illuminate\Console\View\Components\Factory;
 use InvalidArgumentException;
@@ -19,6 +20,8 @@ use Sirius\LaravelBuilder\Definitions\ResourceIdentity;
 use Sirius\LaravelBuilder\Definitions\RouteDefinition;
 use Sirius\LaravelBuilder\Discovery\BreadcrumbTargets;
 use Sirius\LaravelBuilder\Discovery\ModelDiscovery;
+use Sirius\LaravelBuilder\Generators\ArtifactWriter;
+use Sirius\LaravelBuilder\Generators\ResourceArtifacts;
 use Sirius\LaravelBuilder\Support\ResourceNamer;
 use Sirius\LaravelBuilder\Support\SelectedModel;
 
@@ -30,7 +33,7 @@ use function Laravel\Prompts\text;
 
 final class CrudWizard
 {
-    public function run(OutputStyle $output): int
+    public function run(OutputStyle $output, bool $dryRun = false): int
     {
         $fieldQuestions = new WizardFields(new Factory($output));
         $models = app(ModelDiscovery::class)->discover(base_path(config('sirius-builder.paths.models')));
@@ -95,7 +98,8 @@ final class CrudWizard
                         breadcrumbTarget: str_ends_with($breadcrumb, '.php') ? $breadcrumb : null
                     );
 
-                    (new WizardReview)->display($output, $review, $table, $model, $scaffold, $browser, $breadcrumb);
+                    $manifest = (new ResourceArtifacts)->plan($review, $model->routeKey(), $scaffold, $browser);
+                    (new WizardReview)->display($output, $review, $table, $manifest, $scaffold, $breadcrumb);
                     $next = select('Next step', ['Edit a section', 'Restart', 'Generate', 'Cancel'], default: 'Cancel');
 
                     if ($next === 'Cancel') {
@@ -103,7 +107,37 @@ final class CrudWizard
                     }
 
                     if ($next === 'Generate') {
-                        throw new InvalidArgumentException($policy->enforce && !$policy->className && !$scaffold ? 'Generation blocked by missing policy.' : 'Resource reviewed. File generation will be available in a later phase.');
+                        if ($dryRun) {
+                            $output->writeln('Dry run complete. No files written.');
+
+                            return 0;
+                        }
+
+                        if ($policy->enforce && !$policy->className && !$scaffold) {
+                            throw new InvalidArgumentException('Generation blocked by missing policy.');
+                        }
+
+                        if ($manifest->blockers) {
+                            throw new InvalidArgumentException('Resolve the conflicts in the review before generating.');
+                        }
+
+                        $approved = [];
+                        foreach ($manifest->overwrites() as $target) {
+                            if (!confirm('Overwrite ' . $target . '?', false)) {
+                                $output->writeln('Generation cancelled.');
+
+                                return 0;
+                            }
+                            $approved[] = $target;
+                        }
+
+                        (new ArtifactWriter)->apply($manifest, $approved);
+                        $count = count(array_filter($manifest->files, static fn (array $file): bool => $file['before'] !== $file['after']));
+                        $output->writeln('Generation complete: ' . $count . ' files changed.');
+                        $output->writeln('Run: php vendor/bin/pest ' . $identity->testPath . '/ResourceTest.php');
+                        $output->writeln('Persistence actions require implementation.');
+
+                        return 0;
                     }
 
                     if ($next === 'Restart') {
@@ -153,7 +187,7 @@ final class CrudWizard
 
     private function breadcrumb(): string
     {
-        if (!app()->bound('Diglactic\Breadcrumbs\Manager')) {
+        if (!app()->bound(Manager::class)) {
             return 'package unavailable';
         }
 
