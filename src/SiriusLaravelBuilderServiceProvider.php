@@ -6,6 +6,7 @@ namespace Sirius\LaravelBuilder;
 
 use Illuminate\Support\ServiceProvider;
 use Sirius\LaravelBuilder\Commands\MakeCrudCommand;
+use Sirius\LaravelBuilder\Generators\StubRenderer;
 
 final class SiriusLaravelBuilderServiceProvider extends ServiceProvider
 {
@@ -17,6 +18,7 @@ final class SiriusLaravelBuilderServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
+            $this->publishes((new StubRenderer)->publishPaths(), 'sirius-builder-stubs');
             $this->commands([MakeCrudCommand::class]);
             $this->publishes([
                 __DIR__ . '/../config/sirius-builder.php' => config_path('sirius-builder.php'),

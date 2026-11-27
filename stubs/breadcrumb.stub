@@ -1,0 +1,3 @@
+\Diglactic\Breadcrumbs\Breadcrumbs::for(%{name}%, function (\Diglactic\Breadcrumbs\Generator $trail%{parameters}%): void {
+    %{body}%
+});

@@ -6,7 +6,8 @@
             "namer",
             "richtext",
             "dialogs",
-            "normalizer"
+            "normalizer",
+            "renderer"
         ],
         "paths": []
     }

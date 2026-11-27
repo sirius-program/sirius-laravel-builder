@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace %{namespace}%;
+
+use Livewire\Component;
+
+final class %{class}% extends Component
+{
+    %{members}%
+
+    public function render(): \Illuminate\Contracts\View\View
+    {
+        return view(%{view}%);
+    }
+}

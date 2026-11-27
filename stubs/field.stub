@@ -1,0 +1,8 @@
+<x-%{namespace}%::%{component}%
+    id="%{id}%"
+    wire:key="%{id}%"
+    wire:model="%{binding}%"
+    error-key="%{binding}%"
+    :label="%{label}%"
+    %{attributes}%
+/>
